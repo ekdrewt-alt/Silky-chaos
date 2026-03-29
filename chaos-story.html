@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Silky Chaos Story Generator</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Caveat:wght@400;700&family=Space+Mono:ital@0;1&display=swap');
+
+  :root {
+    --bg: #0a0a0f;
+    --silk1: #ff6ef7;
+    --silk2: #6ef7ff;
+    --silk3: #f7ff6e;
+    --silk4: #ff9a6e;
+    --white: #f5f0ff;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--white);
+    font-family: 'Space Mono', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+    cursor: crosshair;
+  }
+
+  /* animated silk background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 60% 40% at 20% 30%, rgba(255,110,247,0.12) 0%, transparent 70%),
+      radial-gradient(ellipse 50% 60% at 80% 70%, rgba(110,247,255,0.10) 0%, transparent 70%),
+      radial-gradient(ellipse 40% 50% at 50% 50%, rgba(247,255,110,0.06) 0%, transparent 70%);
+    animation: silkshift 8s ease-in-out infinite alternate;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  @keyframes silkshift {
+    0%   { filter: hue-rotate(0deg) brightness(1); }
+    100% { filter: hue-rotate(40deg) brightness(1.15); }
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 48px 24px 80px;
+  }
+
+  h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(3.5rem, 12vw, 7rem);
+    line-height: 0.9;
+    letter-spacing: 0.02em;
+    background: linear-gradient(135deg, var(--silk1) 0%, var(--silk2) 40%, var(--silk3) 80%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 6px;
+  }
+
+  .subtitle {
+    font-family: 'Caveat', cursive;
+    font-size: 1.3rem;
+    color: var(--silk4);
+    margin-bottom: 48px;
+    letter-spacing: 0.05em;
+  }
+
+  /* controls */
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 32px;
+  }
+
+  .pill-label {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 0.75rem;
+    letter-spacing: 0.15em;
+    color: var(--silk2);
+    margin-bottom: 6px;
+    display: block;
+  }
+
+  .control-group {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 140px;
+  }
+
+  select {
+    background: rgba(255,255,255,0.05);
+    border: 1.5px solid rgba(110,247,255,0.3);
+    color: var(--white);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.78rem;
+    padding: 10px 14px;
+    border-radius: 8px;
+    outline: none;
+    appearance: none;
+    cursor: pointer;
+    transition: border-color 0.2s;
+  }
+  select:hover, select:focus { border-color: var(--silk2); }
+
+  .btn-generate {
+    align-self: flex-end;
+    flex: 1 1 180px;
+    background: linear-gradient(135deg, var(--silk1), var(--silk2));
+    color: #0a0a0f;
+    border: none;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.5rem;
+    letter-spacing: 0.08em;
+    padding: 12px 28px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+    box-shadow: 0 0 24px rgba(255,110,247,0.3);
+  }
+  .btn-generate:hover {
+    transform: scale(1.04) rotate(-1deg);
+    box-shadow: 0 0 40px rgba(110,247,255,0.5);
+  }
+  .btn-generate:active { transform: scale(0.97); }
+
+  /* story output */
+  .story-box {
+    background: rgba(255,255,255,0.03);
+    border: 1.5px solid rgba(255,110,247,0.2);
+    border-radius: 16px;
+    padding: 32px;
+    min-height: 200px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.3s;
+  }
+  .story-box.loading { border-color: var(--silk2); }
+  .story-box.done    { border-color: var(--silk1); }
+
+  .story-box::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 16px;
+    background: linear-gradient(135deg, rgba(255,110,247,0.04), rgba(110,247,255,0.04));
+    pointer-events: none;
+  }
+
+  #story-text {
+    font-family: 'Caveat', cursive;
+    font-size: 1.25rem;
+    line-height: 1.7;
+    color: var(--white);
+    white-space: pre-wrap;
+    position: relative;
+    z-index: 1;
+  }
+
+  .placeholder {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.85rem;
+    color: rgba(245,240,255,0.25);
+    font-style: italic;
+    text-align: center;
+    padding: 40px 0;
+  }
+
+  /* spinner */
+  .spinner {
+    display: none;
+    width: 36px;
+    height: 36px;
+    border: 3px solid rgba(110,247,255,0.2);
+    border-top-color: var(--silk2);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    margin: 40px auto;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* floating chaotic emoji */
+  .floater {
+    position: fixed;
+    font-size: 1.6rem;
+    pointer-events: none;
+    animation: floatup 3s ease-out forwards;
+    z-index: 99;
+  }
+  @keyframes floatup {
+    0%   { opacity: 1; transform: translateY(0) rotate(0deg) scale(1); }
+    100% { opacity: 0; transform: translateY(-180px) rotate(360deg) scale(0.4); }
+  }
+
+  /* share row */
+  .share-row {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+    opacity: 0;
+    transition: opacity 0.4s;
+    pointer-events: none;
+  }
+  .share-row.visible { opacity: 1; pointer-events: all; }
+
+  .btn-small {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.15);
+    color: var(--white);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .btn-small:hover { background: rgba(255,255,255,0.12); }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h1>SILKY<br>CHAOS</h1>
+  <p class="subtitle">✦ a story generator for unhinged minds ✦</p>
+
+  <div class="controls">
+    <div class="control-group">
+      <span class="pill-label">VIBE</span>
+      <select id="vibe">
+        <option value="unhinged fever dream">🌀 fever dream</option>
+        <option value="chaotic and funny">😂 chaotic funny</option>
+        <option value="dramatic and intense">🔥 dramatic</option>
+        <option value="wholesome but weird">🌸 wholesome weird</option>
+        <option value="horror but silly">👻 silly horror</option>
+      </select>
+    </div>
+    <div class="control-group">
+      <span class="pill-label">HERO</span>
+      <select id="hero">
+        <option value="a finger paint blob that gained sentience">🎨 sentient paint blob</option>
+        <option value="Skibidi Toilet">🚽 Skibidi Toilet</option>
+        <option value="a very scared rubber duck">🐥 scared rubber duck</option>
+        <option value="a chaos gremlin in a trench coat">🧥 chaos gremlin</option>
+        <option value="a rogue emoji who escaped their app">💀 escaped emoji</option>
+      </select>
+    </div>
+    <div class="control-group">
+      <span class="pill-label">SETTING</span>
+      <select id="setting">
+        <option value="an IKEA at 3am">🛋️ 3am IKEA</option>
+        <option value="the inside of a washing machine">🌊 washing machine</option>
+        <option value="a suburban neighborhood where nothing makes sense">🏘️ unhinged suburb</option>
+        <option value="a cloud made entirely of cotton candy">☁️ candy cloud</option>
+        <option value="a school cafeteria during a full moon">🌕 cafeteria full moon</option>
+      </select>
+    </div>
+    <button class="btn-generate" onclick="generateStory()">GENERATE ✦</button>
+  </div>
+
+  <div class="story-box" id="story-box">
+    <div class="placeholder" id="placeholder">hit generate and embrace the chaos 🌀</div>
+    <div class="spinner" id="spinner"></div>
+    <div id="story-text"></div>
+  </div>
+
+  <div class="share-row" id="share-row">
+    <button class="btn-small" onclick="copyStory()">📋 copy story</button>
+    <button class="btn-small" onclick="generateStory()">🔄 regenerate</button>
+  </div>
+</div>
+
+<script>
+async function generateStory() {
+  const vibe    = document.getElementById('vibe').value;
+  const hero    = document.getElementById('hero').value;
+  const setting = document.getElementById('setting').value;
+
+  const box      = document.getElementById('story-box');
+  const spinner  = document.getElementById('spinner');
+  const text     = document.getElementById('story-text');
+  const ph       = document.getElementById('placeholder');
+  const shareRow = document.getElementById('share-row');
+
+  ph.style.display    = 'none';
+  text.textContent    = '';
+  spinner.style.display = 'block';
+  box.className       = 'story-box loading';
+  shareRow.className  = 'share-row';
+
+  spawnFloaters();
+
+  const prompt = `Write a short, wildly entertaining micro-story (4-6 sentences) with a ${vibe} vibe. 
+The main character is ${hero}. The story takes place in ${setting}. 
+Make it feel completely unhinged but also strangely satisfying. 
+End with a punchline or unexpected twist. No titles, just the story.`;
+
+  try {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 1000,
+        messages: [{ role: "user", content: prompt }]
+      })
+    });
+
+    const data = await res.json();
+    const story = data.content?.map(b => b.text || '').join('') || 'The chaos refused to load. Try again.';
+
+    spinner.style.display = 'none';
+    box.className = 'story-box done';
+    typewriter(text, story, () => {
+      shareRow.className = 'share-row visible';
+    });
+  } catch (e) {
+    spinner.style.display = 'none';
+    text.textContent = '⚠️ The chaos dimension is offline. Try again!';
+    box.className = 'story-box';
+  }
+}
+
+function typewriter(el, text, onDone) {
+  let i = 0;
+  const speed = 18;
+  function tick() {
+    if (i < text.length) {
+      el.textContent += text[i++];
+      setTimeout(tick, speed);
+    } else {
+      onDone && onDone();
+    }
+  }
+  tick();
+}
+
+function copyStory() {
+  const txt = document.getElementById('story-text').textContent;
+  navigator.clipboard.writeText(txt).then(() => {
+    const btn = event.target;
+    btn.textContent = '✅ copied!';
+    setTimeout(() => btn.textContent = '📋 copy story', 1800);
+  });
+}
+
+const chaosEmoji = ['🌀','🔥','💀','✨','🎨','🚽','💥','🌸','🤑','😨','👻','🫠'];
+function spawnFloaters() {
+  for (let i = 0; i < 8; i++) {
+    setTimeout(() => {
+      const el = document.createElement('div');
+      el.className = 'floater';
+      el.textContent = chaosEmoji[Math.floor(Math.random() * chaosEmoji.length)];
+      el.style.left = Math.random() * 100 + 'vw';
+      el.style.top  = (60 + Math.random() * 30) + 'vh';
+      document.body.appendChild(el);
+      setTimeout(() => el.remove(), 3000);
+    }, i * 120);
+  }
+}
+</script>
+</body>
+</html>
